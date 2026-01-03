@@ -1,0 +1,28 @@
+namespace: platform
+
+image:
+  registry: docker.io/myorg
+  pullPolicy: IfNotPresent
+
+frontend:
+  image: frontend
+  tag: latest
+  replicas: 2
+  servicePort: 80
+
+backend:
+  image: backend
+  tag: latest
+  replicas: 2
+  servicePort: 8080
+
+database:
+  image: postgres
+  tag: "14"
+  storage: 10Gi
+  port: 5432
+
+ingress:
+  enabled: true
+  host: example.com
+  className: nginx

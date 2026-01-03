@@ -1,0 +1,64 @@
+pipeline {
+  agent any
+
+  environment {
+    REGISTRY = "docker.io/myorg"
+    IMAGE_TAG = "${env.BUILD_NUMBER}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build Images') {
+      steps {
+        sh '''
+        docker build -t $REGISTRY/backend:$IMAGE_TAG -f docker/backend.Dockerfile .
+        docker build -t $REGISTRY/frontend:$IMAGE_TAG -f docker/frontend.Dockerfile .
+        '''
+      }
+    }
+
+    stage('Push Images') {
+      steps {
+        sh '''
+        docker push $REGISTRY/backend:$IMAGE_TAG
+        docker push $REGISTRY/frontend:$IMAGE_TAG
+        '''
+      }
+    }
+
+    stage('Install Ingress Controller') {
+      steps {
+        sh '''
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+        helm repo update
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx
+        '''
+      }
+    }
+
+    stage('Deploy Application') {
+      steps {
+        sh '''
+        helm upgrade --install platform helm/platform \
+          --set backend.tag=$IMAGE_TAG \
+          --set frontend.tag=$IMAGE_TAG
+        '''
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Deployment successful"
+    }
+    failure {
+      echo "Deployment failed"
+    }
+  }
+}
